@@ -18,7 +18,6 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-
   final _toDoController = TextEditingController();
 
   List _todoList = [];
@@ -33,8 +32,7 @@ class _HomeState extends State<Home> {
       setState(() {
         _todoList = json.decode(data);
       });
-      });
-
+    });
   }
 
   void _addToDo() {
@@ -46,6 +44,25 @@ class _HomeState extends State<Home> {
       _todoList.add(newToDo);
       _saveData();
     });
+  }
+
+  Future<Null> _refresh() async {
+    await Future.delayed(Duration(seconds: 1));
+
+    setState(() {
+      _todoList.sort((a, b) {
+        if (a["ok"] && !b["ok"])
+          return 1;
+        else if (a["ok"] && b["ok"])
+          return -1;
+        else
+          return 0;
+      });
+
+      _saveData();
+    });
+
+    return null;
   }
 
   @override
@@ -80,10 +97,13 @@ class _HomeState extends State<Home> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-                padding: EdgeInsets.only(top: 10),
-                itemCount: _todoList.length,
-                itemBuilder: buildItem),
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView.builder(
+                  padding: EdgeInsets.only(top: 10),
+                  itemCount: _todoList.length,
+                  itemBuilder: buildItem),
+            ),
           )
         ],
       ),
@@ -97,7 +117,10 @@ class _HomeState extends State<Home> {
         color: Colors.red,
         child: Align(
           alignment: Alignment(-0.9, 0),
-          child: Icon(Icons.delete, color: Colors.white,),
+          child: Icon(
+            Icons.delete,
+            color: Colors.white,
+          ),
         ),
       ),
       direction: DismissDirection.startToEnd,
@@ -105,8 +128,7 @@ class _HomeState extends State<Home> {
         title: Text(_todoList[index]["title"]),
         value: _todoList[index]["ok"],
         secondary: CircleAvatar(
-          child: Icon(
-              _todoList[index]["ok"] ? Icons.check : Icons.error),
+          child: Icon(_todoList[index]["ok"] ? Icons.check : Icons.error),
         ),
         onChanged: (c) {
           setState(() {
@@ -115,7 +137,7 @@ class _HomeState extends State<Home> {
           });
         },
       ),
-      onDismissed: (direction){
+      onDismissed: (direction) {
         setState(() {
           _lastRemoved = Map.from(_todoList[index]);
           _lastRemovedPosition = index;
@@ -124,23 +146,22 @@ class _HomeState extends State<Home> {
           _saveData();
 
           final snack = SnackBar(
-            content: Text("Tarefa ${_lastRemoved["title"] } removida!"),
-            action: SnackBarAction(label: "Desfazer",
-            onPressed: (){
-            setState(() {
-              _todoList.insert(_lastRemovedPosition, _lastRemoved);
-              _saveData();
-            });
-            }),
-          duration: Duration(seconds: 4),
+            content: Text("Tarefa ${_lastRemoved["title"]} removida!"),
+            action: SnackBarAction(
+                label: "Desfazer",
+                onPressed: () {
+                  setState(() {
+                    _todoList.insert(_lastRemovedPosition, _lastRemoved);
+                    _saveData();
+                  });
+                }),
+            duration: Duration(seconds: 4),
           );
           Scaffold.of(context).showSnackBar(snack);
         });
-
       },
     );
   }
-
 
   Future<File> _getFile() async {
     final directory = await getApplicationDocumentsDirectory();
