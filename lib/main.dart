@@ -4,8 +4,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+
 //Created by Guilherme Coutinho @ 2020
-void main(){
+void main() {
   runApp(MaterialApp(
     home: Home(),
   ));
@@ -17,8 +18,30 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  final _toDoController = TextEditingController();
+  List _todoList = [];
 
-  List _todoList = ["Guilherme", "teste"];
+  @override
+  void initState() {
+    super.initState();
+    _readData().then((data) {
+      setState(() {
+        _todoList = json.decode(data);
+      });
+      });
+
+  }
+
+  void _addToDo() {
+    setState(() {
+      Map<String, dynamic> newToDo = Map();
+      newToDo["title"] = _toDoController.text;
+      _toDoController.text = "";
+      newToDo["ok"] = false;
+      _todoList.add(newToDo);
+      _saveData();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,34 +59,40 @@ class _HomeState extends State<Home> {
               children: <Widget>[
                 Expanded(
                   child: TextField(
+                    controller: _toDoController,
                     decoration: InputDecoration(
                         labelText: "Nova Tarefa",
-                        labelStyle: TextStyle(color: Colors.deepOrangeAccent)
-                    ),
+                        labelStyle: TextStyle(color: Colors.deepOrangeAccent)),
                   ),
                 ),
                 RaisedButton(
                   color: Colors.deepOrangeAccent,
                   child: Text("ADD"),
                   textColor: Colors.white,
-                  onPressed: () {},
+                  onPressed: _addToDo,
                 )
               ],
             ),
           ),
           Expanded(
-            child:  ListView.builder(
-              padding: EdgeInsets.only(top: 10),
+            child: ListView.builder(
+                padding: EdgeInsets.only(top: 10),
                 itemCount: _todoList.length,
-                itemBuilder: (context, index){
-                return CheckboxListTile(
-                  title: Text(_todoList[index]["title"]),
-                  value: _todoList[index]["ok"],
-                  secondary: CircleAvatar(
-                    child: Icon(_todoList[index]["ok"] ?
-                    Icons.check : Icons.error),
-                  ),
-                );
+                itemBuilder: (context, index) {
+                  return CheckboxListTile(
+                    title: Text(_todoList[index]["title"]),
+                    value: _todoList[index]["ok"],
+                    secondary: CircleAvatar(
+                      child: Icon(
+                          _todoList[index]["ok"] ? Icons.check : Icons.error),
+                    ),
+                    onChanged: (c) {
+                      setState(() {
+                        _todoList[index]["ok"] = c;
+                        _saveData();
+                      });
+                    },
+                  );
                 }),
           )
         ],
@@ -80,20 +109,14 @@ class _HomeState extends State<Home> {
     String data = json.encode(_todoList);
     final file = await _getFile();
     return file.writeAsString(data);
-
   }
 
-  Future<String> _readData() async{
+  Future<String> _readData() async {
     try {
       final file = await _getFile();
       return file.readAsString();
-    }catch (e){
+    } catch (e) {
       return null;
     }
   }
 }
-
-
-
-
-
